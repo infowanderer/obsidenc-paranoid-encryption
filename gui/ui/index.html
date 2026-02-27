@@ -8,119 +8,135 @@
     <script src="app.js" defer></script>
   </head>
   <body>
-    <main class="container">
+    <main class="container" id="main-app">
       <header class="header">
         <div class="title-block">
-          <h1>obsidenc</h1>
-          <p class="subtitle">Paranoid-grade directory encryption (requires sidecar: <code>obsidenc.exe</code>)</p>
+          <h1 data-i18n="title">obsidenc</h1>
+          <p class="subtitle" id="subtitle" data-i18n-html="subtitle">Paranoid-grade directory encryption (requires sidecar: <code>obsidenc.exe</code>)</p>
         </div>
-        <img src="logo.png" alt="obsidenc logo" class="header-logo" />
+        <img src="logo.png" alt="obsidenc logo" class="header-logo" data-i18n-alt="header.logoAlt" />
       </header>
 
-      <nav class="tabs" aria-label="Mode">
-        <button class="tab active" type="button" data-tab="encrypt">Encrypt</button>
-        <button class="tab" type="button" data-tab="decrypt">Decrypt</button>
+      <nav class="tabs" aria-label="Mode" data-i18n-aria-label="aria.mode">
+        <button class="tab active" type="button" data-tab="encrypt" data-i18n="nav.encrypt">Encrypt</button>
+        <button class="tab" type="button" data-tab="decrypt" data-i18n="nav.decrypt">Decrypt</button>
+        <button id="preferences-btn" type="button" class="tab tab-preferences" data-i18n="nav.preferences">Preferences</button>
       </nav>
 
-      <section class="panel active" id="encrypt" aria-label="Encrypt">
+      <section class="panel active" id="encrypt" aria-label="Encrypt" data-i18n-aria-label="aria.encrypt">
         <form id="encrypt-form" autocomplete="off">
           <div class="grid">
             <label>
-              Vault directory (absolute)
+              <span data-i18n="enc.vaultDir">Vault directory (absolute)</span>
               <div class="field-with-button">
-                <input id="enc-vault-dir" type="text" placeholder="C:\\path\\to\\vault" required />
-                <button id="enc-vault-browse" type="button" class="secondary">Browse…</button>
+                <input id="enc-vault-dir" type="text" data-i18n-placeholder="enc.vaultDirPlaceholder" placeholder="C:\path\to\vault" required />
+                <button id="enc-vault-browse" type="button" class="secondary" data-i18n="enc.browse">Browse…</button>
               </div>
             </label>
             <label>
-              Output file (absolute, .oen added if missing)
+              <span data-i18n="enc.outputFile">Output file (absolute, .oen added if missing)</span>
               <div class="field-with-button">
-                <input id="enc-output-file" type="text" placeholder="C:\\path\\to\\archive.oen" required />
-                <button id="enc-output-browse" type="button" class="secondary">Browse…</button>
+                <input id="enc-output-file" type="text" data-i18n-placeholder="enc.outputFilePlaceholder" placeholder="C:\path\to\archive.oen" required />
+                <button id="enc-output-browse" type="button" class="secondary" data-i18n="enc.browse">Browse…</button>
               </div>
             </label>
             <label>
-              Keyfile (optional, absolute)
+              <span data-i18n="enc.keyfile">Keyfile (optional, absolute)</span>
               <div class="field-with-button">
-                <input id="enc-keyfile" type="text" placeholder="C:\\path\\to\\keyfile.bin" />
-                <button id="enc-keyfile-browse" type="button" class="secondary">Browse…</button>
+                <input id="enc-keyfile" type="text" data-i18n-placeholder="enc.keyfilePlaceholder" placeholder="C:\path\to\keyfile.bin" />
+                <button id="enc-keyfile-browse" type="button" class="secondary" data-i18n="enc.browse">Browse…</button>
               </div>
             </label>
             <label class="checkbox">
               <input id="enc-force" type="checkbox" />
-              Overwrite existing output
+              <span data-i18n="enc.overwriteOutput">Overwrite existing output</span>
             </label>
             <label>
-              Password (min 20 chars)
+              <span data-i18n="enc.passwordLabel">Password (min 20 chars)</span>
               <input id="enc-password" type="password" autocomplete="new-password" required />
             </label>
             <label>
-              Confirm password
+              <span data-i18n="enc.confirmPassword">Confirm password</span>
               <input id="enc-password-confirm" type="password" autocomplete="new-password" required />
             </label>
           </div>
           <div class="actions">
-            <button id="enc-run" type="submit">Encrypt</button>
-            <span class="hint">Passwords are sent via stdin and zeroized in Rust after write.</span>
+            <button id="enc-run" type="submit" data-i18n="enc.run">Encrypt</button>
+            <span class="hint" data-i18n="enc.hint">Passwords are sent via stdin and zeroized in Rust after write.</span>
           </div>
         </form>
       </section>
 
-      <section class="panel" id="decrypt" aria-label="Decrypt">
+      <section class="panel" id="decrypt" aria-label="Decrypt" data-i18n-aria-label="aria.decrypt">
         <form id="decrypt-form" autocomplete="off">
           <div class="grid">
             <label>
-              Input file (absolute)
+              <span data-i18n="dec.inputFile">Input file (absolute)</span>
               <div class="field-with-button">
-                <input id="dec-input-file" type="text" placeholder="C:\\path\\to\\archive.oen" required />
-                <button id="dec-input-browse" type="button" class="secondary">Browse…</button>
+                <input id="dec-input-file" type="text" data-i18n-placeholder="dec.inputFilePlaceholder" placeholder="C:\path\to\archive.oen" required />
+                <button id="dec-input-browse" type="button" class="secondary" data-i18n="enc.browse">Browse…</button>
               </div>
             </label>
             <label>
-              Output directory (absolute)
+              <span data-i18n="dec.outputDir">Output directory (absolute)</span>
               <div class="field-with-button">
-                <input id="dec-output-dir" type="text" placeholder="C:\\path\\to\\output" required />
-                <button id="dec-output-browse" type="button" class="secondary">Browse…</button>
+                <input id="dec-output-dir" type="text" data-i18n-placeholder="dec.outputDirPlaceholder" placeholder="C:\path\to\output" required />
+                <button id="dec-output-browse" type="button" class="secondary" data-i18n="enc.browse">Browse…</button>
               </div>
             </label>
             <label>
-              Keyfile (optional, absolute)
+              <span data-i18n="dec.keyfile">Keyfile (optional, absolute)</span>
               <div class="field-with-button">
-                <input id="dec-keyfile" type="text" placeholder="C:\\path\\to\\keyfile.bin" />
-                <button id="dec-keyfile-browse" type="button" class="secondary">Browse…</button>
+                <input id="dec-keyfile" type="text" data-i18n-placeholder="dec.keyfilePlaceholder" placeholder="C:\path\to\keyfile.bin" />
+                <button id="dec-keyfile-browse" type="button" class="secondary" data-i18n="enc.browse">Browse…</button>
               </div>
             </label>
             <label class="checkbox">
               <input id="dec-force" type="checkbox" />
-              Allow overwrite
+              <span data-i18n="dec.allowOverwrite">Allow overwrite</span>
             </label>
             <label class="checkbox">
               <input id="dec-secure-delete" type="checkbox" />
-              Secure-delete staging files (slower)
+              <span data-i18n="dec.secureDelete">Secure-delete staging files (slower)</span>
             </label>
             <label>
-              Password (min 20 chars)
+              <span data-i18n="dec.passwordLabel">Password (min 20 chars)</span>
               <input id="dec-password" type="password" autocomplete="current-password" required />
             </label>
           </div>
           <div class="actions">
-            <button id="dec-run" type="submit">Decrypt</button>
+            <button id="dec-run" type="submit" data-i18n="dec.run">Decrypt</button>
           </div>
         </form>
       </section>
 
-      <section class="logs" aria-label="Logs">
+      <section class="logs" aria-label="Logs" data-i18n-aria-label="aria.logs">
         <div class="log-header">
-          <h2>Logs</h2>
-          <button id="clear-logs" type="button">Clear</button>
+          <h2 data-i18n="logs.title">Logs</h2>
+          <button id="clear-logs" type="button" data-i18n="logs.clear">Clear</button>
         </div>
         <pre id="log-output" class="log-output"></pre>
         <div id="status" class="status" role="status" aria-live="polite"></div>
       </section>
       <footer class="footer">
-        <span id="version-label" class="version-label" aria-label="Obsidenc GUI version"></span>
+        <span id="version-label" class="version-label" aria-label="Obsidenc GUI version" data-i18n-aria-label="aria.version"></span>
       </footer>
     </main>
+
+    <div id="preferences-overlay" class="modal-overlay" aria-hidden="true">
+      <div class="modal-dialog" role="dialog" aria-labelledby="prefs-title" aria-modal="true">
+        <h2 id="prefs-title" class="modal-title" data-i18n="prefs.title">Preferences</h2>
+        <div class="modal-body">
+          <label for="prefs-language" class="modal-label" data-i18n="prefs.language">Language</label>
+          <select id="prefs-language" class="modal-select">
+            <option value="en" data-i18n="prefs.langEnglish">English</option>
+            <option value="fr" data-i18n="prefs.langFrench">Français</option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button id="prefs-close" type="button" class="modal-close" data-i18n="prefs.close">Close</button>
+        </div>
+      </div>
+    </div>
   </body>
 </html>
-

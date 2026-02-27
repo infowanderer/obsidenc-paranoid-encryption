@@ -1,7 +1,58 @@
+const LOCALE_STORAGE_KEY = "obsidenc-locale";
+let strings = {};
+let currentLocale = "en";
+
 function $(id) {
   const el = document.getElementById(id);
   if (!el) throw new Error(`Missing element: ${id}`);
   return el;
+}
+
+function t(key, params) {
+  let s = strings[key];
+  if (typeof s !== "string") return key;
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      s = s.replace(new RegExp("{{" + k + "}}", "g"), String(v));
+    }
+  }
+  return s;
+}
+
+async function loadLocale(locale) {
+  const r = await fetch("./locales/" + locale + ".json");
+  strings = await r.json();
+}
+
+function applyLocale(locale) {
+  document.documentElement.lang = locale === "fr" ? "fr" : "en";
+  currentLocale = locale;
+
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    if (key) el.textContent = t(key);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-placeholder");
+    if (key) el.placeholder = t(key);
+  });
+  document.querySelectorAll("[data-i18n-alt]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-alt");
+    if (key) el.alt = t(key);
+  });
+  document.querySelectorAll("[data-i18n-aria-label]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-aria-label");
+    if (key) el.setAttribute("aria-label", t(key));
+  });
+
+  const subtitleEl = document.getElementById("subtitle");
+  if (subtitleEl && subtitleEl.hasAttribute("data-i18n-html")) {
+    const raw = t("subtitle");
+    subtitleEl.innerHTML = raw.replace("obsidenc.exe", "<code>obsidenc.exe</code>");
+  }
+
+  const titleEl = document.querySelector("title");
+  if (titleEl) titleEl.textContent = t("title");
 }
 
 function setStatus(message, kind = "") {
@@ -9,12 +60,9 @@ function setStatus(message, kind = "") {
   status.textContent = message;
   status.className = `status${kind ? ` ${kind}` : ""}`;
   if (message) {
-    // Ensure the status banner is visible when we have something to show.
     try {
       status.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    } catch (_) {
-      // Ignore if scrollIntoView is not supported.
-    }
+    } catch (_) {}
   }
 }
 
@@ -28,44 +76,41 @@ function clearLogs() {
   $("log-output").textContent = "";
 }
 
-function validateAbsolutePath(label, value) {
-  if (!value || value.trim() === "") return `${label} is required`;
+function validateAbsolutePath(fieldKey, value) {
+  if (!value || value.trim() === "") return t("validation." + fieldKey + "Required");
   const v = value.trim();
   const isWindowsAbs = /^[a-zA-Z]:\\/.test(v) || /^\\\\/.test(v);
   const isUnixAbs = v.startsWith("/");
-  if (!isWindowsAbs && !isUnixAbs) return `${label} must be an absolute path`;
+  if (!isWindowsAbs && !isUnixAbs) {
+    return t(fieldKey === "keyfile" ? "validation.keyfileAbsolute" : "validation." + fieldKey + "Absolute");
+  }
   return null;
 }
 
 function validatePassword(value) {
-  if (!value) return "Password is required";
-  if (value.includes("\n") || value.includes("\r") || value.includes("\0")) return "Password contains invalid characters";
-  if ([...value].length < 20) return "Password must be at least 20 characters";
+  if (!value) return t("validation.passwordRequired");
+  if (value.includes("\n") || value.includes("\r") || value.includes("\0")) return t("validation.passwordInvalidChars");
+  if ([...value].length < 20) return t("validation.passwordMinLength");
   return null;
 }
 
 async function main() {
   const TAURI = window.__TAURI__;
   if (!TAURI || !TAURI.core || !TAURI.event) {
-    setStatus("Tauri API not available (withGlobalTauri must be enabled).", "error");
+    setStatus(t("status.tauriUnavailable"), "error");
     return;
   }
 
   let activeOpId = null;
   let busy = false;
 
-  // Populate version label (bottom-right) from Tauri backend.
   try {
     const info = await TAURI.core.invoke("get_version");
     if (info && typeof info.gui === "string") {
       const el = document.getElementById("version-label");
-      if (el) {
-        el.textContent = `v${info.gui}`;
-      }
+      if (el) el.textContent = "v" + info.gui;
     }
-  } catch (_) {
-    // Non-fatal if version cannot be resolved.
-  }
+  } catch (_) {}
 
   await TAURI.event.listen("obsidenc/log", (event) => {
     const payload = event.payload;
@@ -77,6 +122,7 @@ async function main() {
 
   for (const btn of document.querySelectorAll(".tab")) {
     btn.addEventListener("click", () => {
+      if (!btn.dataset.tab) return;
       for (const b of document.querySelectorAll(".tab")) b.classList.remove("active");
       btn.classList.add("active");
       const tab = btn.dataset.tab;
@@ -91,13 +137,56 @@ async function main() {
     setStatus("");
   });
 
-  // Browse for vault directory (encrypt)
+  const overlay = document.getElementById("preferences-overlay");
+  const prefsBtn = document.getElementById("preferences-btn");
+  const prefsClose = document.getElementById("prefs-close");
+  const prefsLanguage = document.getElementById("prefs-language");
+
+  function openPreferences() {
+    if (prefsLanguage) prefsLanguage.value = currentLocale;
+    if (overlay) {
+      overlay.setAttribute("aria-hidden", "false");
+      prefsClose && prefsClose.focus();
+    }
+  }
+
+  function closePreferences() {
+    if (overlay) overlay.setAttribute("aria-hidden", "true");
+    prefsBtn && prefsBtn.focus();
+  }
+
+  function savePreferencesAndClose() {
+    const next = prefsLanguage ? prefsLanguage.value : currentLocale;
+    if (next && next !== currentLocale) {
+      localStorage.setItem(LOCALE_STORAGE_KEY, next);
+      loadLocale(next).then(() => {
+        applyLocale(next);
+        closePreferences();
+      });
+    } else {
+      closePreferences();
+    }
+  }
+
+  if (prefsBtn) prefsBtn.addEventListener("click", openPreferences);
+  if (prefsClose) prefsClose.addEventListener("click", savePreferencesAndClose);
+  if (overlay) {
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) savePreferencesAndClose();
+    });
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && overlay && overlay.getAttribute("aria-hidden") === "false") {
+      savePreferencesAndClose();
+    }
+  });
+
   const vaultBrowseBtn = document.getElementById("enc-vault-browse");
   if (vaultBrowseBtn && TAURI.dialog && TAURI.dialog.open) {
     vaultBrowseBtn.addEventListener("click", async () => {
       try {
         const selected = await TAURI.dialog.open({
-          title: "Select vault directory",
+          title: t("dialog.selectVaultDir"),
           directory: true,
           multiple: false,
         });
@@ -111,22 +200,16 @@ async function main() {
     });
   }
 
-  // Browse for output file (encrypt)
   const outputBrowseBtn = document.getElementById("enc-output-browse");
   if (outputBrowseBtn && TAURI.dialog && (TAURI.dialog.save || TAURI.dialog.open)) {
     outputBrowseBtn.addEventListener("click", async () => {
       try {
-        // Prefer the native 'save' dialog when available so the user can
-        // choose both folder and filename for a new archive.
         let selected;
         if (TAURI.dialog.save) {
-          selected = await TAURI.dialog.save({
-            title: "Choose output file",
-          });
+          selected = await TAURI.dialog.save({ title: t("dialog.chooseOutputFile") });
         } else {
-          // Fallback to open dialog if save is not available
           selected = await TAURI.dialog.open({
-            title: "Select output file",
+            title: t("dialog.selectOutputFile"),
             directory: false,
             multiple: false,
           });
@@ -141,13 +224,12 @@ async function main() {
     });
   }
 
-  // Browse for keyfile (encrypt)
   const keyfileBrowseBtn = document.getElementById("enc-keyfile-browse");
   if (keyfileBrowseBtn && TAURI.dialog && TAURI.dialog.open) {
     keyfileBrowseBtn.addEventListener("click", async () => {
       try {
         const selected = await TAURI.dialog.open({
-          title: "Select keyfile",
+          title: t("dialog.selectKeyfile"),
           directory: false,
           multiple: false,
         });
@@ -161,13 +243,12 @@ async function main() {
     });
   }
 
-  // Browse for input file (decrypt)
   const decInputBrowseBtn = document.getElementById("dec-input-browse");
   if (decInputBrowseBtn && TAURI.dialog && TAURI.dialog.open) {
     decInputBrowseBtn.addEventListener("click", async () => {
       try {
         const selected = await TAURI.dialog.open({
-          title: "Select input file",
+          title: t("dialog.selectInputFile"),
           directory: false,
           multiple: false,
         });
@@ -181,13 +262,12 @@ async function main() {
     });
   }
 
-  // Browse for output directory (decrypt)
   const decOutputBrowseBtn = document.getElementById("dec-output-browse");
   if (decOutputBrowseBtn && TAURI.dialog && TAURI.dialog.open) {
     decOutputBrowseBtn.addEventListener("click", async () => {
       try {
         const selected = await TAURI.dialog.open({
-          title: "Select output directory",
+          title: t("dialog.selectOutputDir"),
           directory: true,
           multiple: false,
         });
@@ -201,13 +281,12 @@ async function main() {
     });
   }
 
-  // Browse for keyfile (decrypt)
   const decKeyfileBrowseBtn = document.getElementById("dec-keyfile-browse");
   if (decKeyfileBrowseBtn && TAURI.dialog && TAURI.dialog.open) {
     decKeyfileBrowseBtn.addEventListener("click", async () => {
       try {
         const selected = await TAURI.dialog.open({
-          title: "Select keyfile",
+          title: t("dialog.selectKeyfile"),
           directory: false,
           multiple: false,
         });
@@ -232,7 +311,7 @@ async function main() {
     if (busy) return;
 
     clearLogs();
-    setStatus("Encrypting…");
+    setStatus(t("status.encrypting"));
     activeOpId = null;
 
     const vault_dir = $("enc-vault-dir").value;
@@ -243,9 +322,9 @@ async function main() {
     let password = $("enc-password").value;
     let password_confirm = $("enc-password-confirm").value;
 
-    const err1 = validateAbsolutePath("Vault directory", vault_dir);
-    const err2 = validateAbsolutePath("Output file", output_file);
-    const err3 = keyfile ? validateAbsolutePath("Keyfile", keyfile) : null;
+    const err1 = validateAbsolutePath("vaultDir", vault_dir);
+    const err2 = validateAbsolutePath("outputFile", output_file);
+    const err3 = keyfile ? validateAbsolutePath("keyfile", keyfile) : null;
     const errP = validatePassword(password);
     const errPC = validatePassword(password_confirm);
     if (err1 || err2 || err3 || errP || errPC) {
@@ -253,7 +332,7 @@ async function main() {
       return;
     }
     if (password !== password_confirm) {
-      setStatus("Passwords did not match.", "error");
+      setStatus(t("validation.passwordsNoMatch"), "error");
       return;
     }
 
@@ -275,9 +354,9 @@ async function main() {
 
       activeOpId = result.id;
       if (result.exit_code === 0) {
-        setStatus(`Encryption successful: ${result.resolved_output}`, "ok");
+        setStatus(t("status.encryptionSuccess", { path: result.resolved_output }), "ok");
       } else {
-        setStatus(`Encryption failed (exit code: ${result.exit_code ?? "unknown"})`, "error");
+        setStatus(t("status.encryptionFailed", { code: result.exit_code ?? "unknown" }), "error");
       }
     } catch (err) {
       setStatus(String(err), "error");
@@ -293,7 +372,7 @@ async function main() {
     if (busy) return;
 
     clearLogs();
-    setStatus("Decrypting…");
+    setStatus(t("status.decrypting"));
     activeOpId = null;
 
     const input_file = $("dec-input-file").value;
@@ -304,9 +383,9 @@ async function main() {
 
     let password = $("dec-password").value;
 
-    const err1 = validateAbsolutePath("Input file", input_file);
-    const err2 = validateAbsolutePath("Output directory", output_dir);
-    const err3 = keyfile ? validateAbsolutePath("Keyfile", keyfile) : null;
+    const err1 = validateAbsolutePath("inputFile", input_file);
+    const err2 = validateAbsolutePath("outputDir", output_dir);
+    const err3 = keyfile ? validateAbsolutePath("keyfile", keyfile) : null;
     const errP = validatePassword(password);
     if (err1 || err2 || err3 || errP) {
       setStatus(err1 || err2 || err3 || errP, "error");
@@ -330,9 +409,9 @@ async function main() {
 
       activeOpId = result.id;
       if (result.exit_code === 0) {
-        setStatus(`Decryption successful: ${result.resolved_output}`, "ok");
+        setStatus(t("status.decryptionSuccess", { path: result.resolved_output }), "ok");
       } else {
-        setStatus(`Decryption failed (exit code: ${result.exit_code ?? "unknown"})`, "error");
+        setStatus(t("status.decryptionFailed", { code: result.exit_code ?? "unknown" }), "error");
       }
     } catch (err) {
       setStatus(String(err), "error");
@@ -343,7 +422,20 @@ async function main() {
   });
 }
 
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
+  const locale = localStorage.getItem(LOCALE_STORAGE_KEY) || "en";
+  try {
+    await loadLocale(locale);
+    applyLocale(locale);
+  } catch (e) {
+    try {
+      await loadLocale("en");
+      applyLocale("en");
+    } catch (_) {
+      // No locale at all; strings stay empty, t() returns key
+    }
+  }
+  const mainEl = document.getElementById("main-app");
+  if (mainEl) mainEl.classList.add("ready");
   main().catch((e) => setStatus(String(e), "error"));
 });
-

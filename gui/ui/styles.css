@@ -50,6 +50,11 @@ body {
   max-width: 980px;
   margin: 24px auto;
   padding: 0 16px 32px;
+  visibility: hidden;
+}
+
+.container.ready {
+  visibility: visible;
 }
 
 .header {
@@ -88,8 +93,13 @@ body {
 
 .tabs {
   display: flex;
+  align-items: center;
   gap: 8px;
   margin: 20px 0 12px;
+}
+
+.tab-preferences {
+  margin-left: auto;
 }
 
 .tab {
@@ -276,6 +286,82 @@ button[type="submit"]:disabled {
   color: var(--ok);
   border-color: var(--ok);
   background: rgba(52, 211, 153, 0.10);
+}
+
+/* Preferences modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-overlay[aria-hidden="false"] {
+  display: flex;
+}
+
+.modal-dialog {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  max-width: 360px;
+  width: 90%;
+  color-scheme: dark;
+}
+
+.modal-title {
+  margin: 0 0 16px;
+  font-size: 18px;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.modal-label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.modal-select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.modal-select option {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal-close {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  border-color: var(--accent);
 }
 
 @media (max-width: 760px) {
