@@ -77,7 +77,7 @@ printf '%s\n' "$PW" | obsidenc --password-stdin decrypt <input_file> <output_dir
 
 The repository includes a minimal Tauri desktop UI that drives `obsidenc` as a bundled sidecar binary. The GUI does **not** implement crypto; it spawns `obsidenc` and passes the password via stdin (`--password-stdin`).
 
-From `gui/`:
+From `gui/`, **development and packaging** require [Node.js](https://nodejs.org/) on `PATH` (Tauri runs `node scripts/dev.js` and `node scripts/build-sidecar.js` before the app build). **End users who install a release build do not need Node.js**; the shipped app has no Node runtime.
 
 ```sh
 # Dev (builds sidecar + starts a local UI server)
@@ -86,6 +86,8 @@ cargo tauri dev
 # Release bundle (builds sidecar from source and embeds it)
 cargo tauri build
 ```
+
+GUI version is defined in `gui/src-tauri/tauri.conf.json` (`version`). After bumping it, run `node scripts/sync-version.js` from `gui/` so `gui/src-tauri/Cargo.toml` matches (needed for `get_version` / `CARGO_PKG_VERSION`).
 
 ## Supply-chain security (release blockers)
 

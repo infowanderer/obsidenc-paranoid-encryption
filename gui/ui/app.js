@@ -24,6 +24,19 @@ async function loadLocale(locale) {
   strings = await r.json();
 }
 
+function getSupportedLocaleFromSystem() {
+  const raw = navigator.languages?.[0] || navigator.language || "en";
+  const base = raw.toLowerCase().split("-")[0];
+  if (base === "fr") return "fr";
+  return "en";
+}
+
+function getValidatedSavedLocale() {
+  const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
+  if (saved === "en" || saved === "fr") return saved;
+  return null;
+}
+
 function applyLocale(locale) {
   document.documentElement.lang = locale === "fr" ? "fr" : "en";
   currentLocale = locale;
@@ -423,7 +436,17 @@ async function main() {
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
-  const locale = localStorage.getItem(LOCALE_STORAGE_KEY) || "en";
+  const rawSaved = localStorage.getItem(LOCALE_STORAGE_KEY);
+  let locale = getValidatedSavedLocale();
+  if (!locale) {
+    locale = getSupportedLocaleFromSystem();
+    localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+  }
+  console.log("Locale:", {
+    saved: rawSaved,
+    effective: locale,
+    system: navigator.languages?.[0] || navigator.language,
+  });
   try {
     await loadLocale(locale);
     applyLocale(locale);
@@ -431,8 +454,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     try {
       await loadLocale("en");
       applyLocale("en");
+      localStorage.setItem(LOCALE_STORAGE_KEY, "en");
     } catch (_) {
-      // No locale at all; strings stay empty, t() returns key
+      localStorage.setItem(LOCALE_STORAGE_KEY, "en");
     }
   }
   const mainEl = document.getElementById("main-app");
